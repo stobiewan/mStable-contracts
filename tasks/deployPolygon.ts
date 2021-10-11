@@ -35,7 +35,6 @@ import {
     StakingRewardsWithPlatformToken__factory,
     StakingRewardsWithPlatformToken,
 } from "types/generated"
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address"
 import { DEAD_ADDRESS, KEY_LIQUIDATOR, KEY_PROXY_ADMIN, KEY_SAVINGS_MANAGER, ONE_DAY, ZERO_ADDRESS } from "@utils/constants"
 import { BN, simpleToExactAmount } from "@utils/math"
 import { formatUnits } from "@ethersproject/units"
@@ -337,8 +336,8 @@ task("deploy-polly", "Deploys mUSD & System to a Polygon network")
         const massetLogic = await deployContract<MassetLogic>(new MassetLogic__factory(signer), "MassetLogic")
         const managerLib = await deployContract<MassetManager>(new MassetManager__factory(signer), "MassetManager")
         const linkedAddress = {
-            __$6a4be19f34d71a078def5cee18ccebcd10$__: massetLogic.address,
-            __$3b19b776afde68cd758db0cae1b8e49f94$__: managerLib.address,
+            "contracts/masset/MassetLogic.sol:MassetLogic": massetLogic.address,
+            "contracts/masset/MassetManager.sol:MassetManager": managerLib.address,
         }
 
         // Deploy mUSD Masset

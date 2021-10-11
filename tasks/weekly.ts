@@ -2,7 +2,7 @@
 /* eslint-disable no-await-in-loop */
 import { task, types } from "hardhat/config"
 import { getSigner } from "./utils/signerFactory"
-import { alUSD, AssetAddressTypes, BUSD, GUSD, HBTC, isToken, mBTC, MTA, mUSD, PMTA, PmUSD, PWMATIC, TBTC, Token } from "./utils"
+import { alUSD, AssetAddressTypes, BUSD, GUSD, HBTC, isToken, mBPT, mBTC, MTA, mUSD, PMTA, PmUSD, PWMATIC, TBTC, Token } from "./utils"
 import { ContractNames } from "./utils/networkAddressFactory"
 
 task("distribute-mta-mainnet", "Distributes MTA rewards on Mainnet")
@@ -12,18 +12,18 @@ task("distribute-mta-mainnet", "Distributes MTA rewards on Mainnet")
         const signerAddress = await signer.getAddress()
         const rewardSymbol = MTA.symbol
         const ownerTokenType: AssetAddressTypes = "vault"
-        const vaultsOrPools: Array<Token | ContractNames> = [MTA, "UniswapV2-MTA/WETH", mUSD, mBTC, alUSD, BUSD, GUSD, HBTC, TBTC]
-        const mtaAmounts = [40000, 5000, 16732.99, 7333.41, 11283.58, 20318.86, 25470.03, 28926.78, 10266.35]
+        const vaultsOrPools: Array<Token | ContractNames> = [MTA, mBPT, mUSD, mBTC, alUSD, BUSD, GUSD, HBTC, TBTC]
+        const mtaAmounts = [32500, 20000, 15320.51, 6245.89, 13540.33, 24728.5, 22130.56, 15909.82, 9956.39]
         const vaultNames = [
-            "Staking V1 rewards   ",
-            "MTA / WETH Uniswap v2",
-            "imUSD Vault          ",
-            "imBTC Vault          ",
-            "alUSD Feeder Pool    ",
-            "BUSD Feeder Pool     ",
-            "GUSD Feeder Pool     ",
-            "HBTC Feeder Pool     ",
-            "TBTC Feeder Pool     ",
+            "Staking V2 MTA   ",
+            "Staking V2 mBPT  ",
+            "imUSD Vault      ",
+            "imBTC Vault      ",
+            "alUSD Feeder Pool",
+            "BUSD Feeder Pool ",
+            "GUSD Feeder Pool ",
+            "HBTC Feeder Pool ",
+            "TBTC Feeder Pool ",
         ]
 
         // Create a comma separated list of token symbols and amounts
@@ -83,7 +83,7 @@ task("distribute-mta-polygon", "Distributes MTA and Matic rewards on Polygon")
         const platformRewardSymbol = PWMATIC.symbol
         const vaultsOrPools: Array<Token | ContractNames> = [PmUSD]
         const mtaAmounts = [17360]
-        const platformAmounts = [15555]
+        const platformAmounts = []
 
         // Create a comma separated list of token symbols and amounts
         const symbolOrNames = vaultsOrPools.map((v) => {

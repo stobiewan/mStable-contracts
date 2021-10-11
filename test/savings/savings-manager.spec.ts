@@ -440,7 +440,7 @@ describe("SavingsManager", async () => {
                 const s15 = await snapshotData()
                 assertBNClosePercent(s15.savingsManagerBal, s7.savingsManagerBal.sub(expectedInterest), "0.01")
 
-                expect(s15.liqStream.end).lt(s15.lastCollection as any)
+                expect(s15.liqStream.end).lt(s15.lastCollection)
                 expect(s15.liqStream.rate).eq(s7.liqStream.rate)
                 assertBNClose(s15.savingsManagerBal, BN.from(0), simpleToExactAmount(1, 6))
 
@@ -622,7 +622,7 @@ describe("SavingsManager", async () => {
                 assertBNClosePercent(s16.savingsManagerBal, s115.savingsManagerBal.sub(expectedInterest), "0.01")
                 assertBNClosePercent(s16.savingsContractBal, s115.savingsContractBal.add(expectedInterest), "0.01")
                 // all mUSD should be drained now
-                expect(s16.savingsManagerBal).lt(simpleToExactAmount(1, 16) as any)
+                expect(s16.savingsManagerBal).lt(simpleToExactAmount(1, 16))
                 await increaseTime(ONE_DAY.div(2))
                 // @16.5
                 const ts17 = await getTimestamp()
@@ -664,7 +664,7 @@ describe("SavingsManager", async () => {
                 assertBNClose(
                     BN.from(interectCollectedEvent.args.apy),
                     expectedAPY,
-                    simpleToExactAmount(5, 11), // allow for a 0.000005% deviation in the percentage
+                    simpleToExactAmount(1, 12), // allow for a 0.00001 deviation in the percentage
                 )
                 const lastCollectionAfter = await savingsManager.lastCollection(mUSD.address)
                 assertBNClose(lastCollectionAfter, curTime, BN.from(2))
@@ -735,7 +735,7 @@ describe("SavingsManager", async () => {
                 const passingInterest = simpleToExactAmount(9999, 18)
                 await mUSD.setAmountForCollectInterest(passingInterest)
 
-                const tx = await savingsManager.collectAndDistributeInterest(mUSD.address)
+                await savingsManager.collectAndDistributeInterest(mUSD.address)
 
                 const endTime = await getTimestamp()
                 const lastCollectionEnd = await savingsManager.lastCollection(mUSD.address)
@@ -833,7 +833,7 @@ describe("SavingsManager", async () => {
                 await mUSD.setAmountForCollectInterest(interest_40)
                 await savingsManager.collectAndDistributeInterest(mUSD.address)
                 const lastCollection_40 = await savingsManager.lastCollection(mUSD.address)
-                assertBNClose(lastCollection_40, curTime, 3)
+                assertBNClose(lastCollection_40, curTime, 5)
                 const lastPeriodStart_40 = await savingsManager.lastPeriodStart(mUSD.address)
                 expect(lastPeriodStart_40).eq(lastCollection_40)
                 const periodYield_40 = await savingsManager.periodYield(mUSD.address)
@@ -846,7 +846,7 @@ describe("SavingsManager", async () => {
                 await mUSD.setAmountForCollectInterest(interest_50)
                 await savingsManager.collectAndDistributeInterest(mUSD.address)
                 const lastCollection_50 = await savingsManager.lastCollection(mUSD.address)
-                assertBNClose(lastCollection_50, curTime, 3)
+                assertBNClose(lastCollection_50, curTime, 5)
                 const lastPeriodStart_50 = await savingsManager.lastPeriodStart(mUSD.address)
                 expect(lastPeriodStart_50).eq(lastCollection_40)
                 const periodYield_50 = await savingsManager.periodYield(mUSD.address)
@@ -859,7 +859,7 @@ describe("SavingsManager", async () => {
                 await mUSD.setAmountForCollectInterest(interest_65)
                 await savingsManager.collectAndDistributeInterest(mUSD.address)
                 const lastCollection_65 = await savingsManager.lastCollection(mUSD.address)
-                assertBNClose(lastCollection_65, curTime, 3)
+                assertBNClose(lastCollection_65, curTime, 5)
                 const lastPeriodStart_65 = await savingsManager.lastPeriodStart(mUSD.address)
                 expect(lastPeriodStart_65).eq(lastCollection_40)
                 const periodYield_65 = await savingsManager.periodYield(mUSD.address)
@@ -872,7 +872,7 @@ describe("SavingsManager", async () => {
                 await mUSD.setAmountForCollectInterest(interest_80)
                 await savingsManager.collectAndDistributeInterest(mUSD.address)
                 const lastCollection_80 = await savingsManager.lastCollection(mUSD.address)
-                assertBNClose(lastCollection_80, curTime, 3)
+                assertBNClose(lastCollection_80, curTime, 5)
                 const lastPeriodStart_80 = await savingsManager.lastPeriodStart(mUSD.address)
                 expect(lastPeriodStart_80).eq(lastCollection_65)
                 const periodYield_80 = await savingsManager.periodYield(mUSD.address)
@@ -885,7 +885,7 @@ describe("SavingsManager", async () => {
                 await mUSD.setAmountForCollectInterest(interest_120)
                 await savingsManager.collectAndDistributeInterest(mUSD.address)
                 const lastCollection_120 = await savingsManager.lastCollection(mUSD.address)
-                assertBNClose(lastCollection_120, curTime, 3)
+                assertBNClose(lastCollection_120, curTime, 5)
                 const lastPeriodStart_120 = await savingsManager.lastPeriodStart(mUSD.address)
                 expect(lastPeriodStart_120).eq(lastCollection_120)
                 const periodYield_120 = await savingsManager.periodYield(mUSD.address)
@@ -927,7 +927,7 @@ describe("SavingsManager", async () => {
                 assertBNClose(
                     eventArgs.apy,
                     expectedAPY,
-                    simpleToExactAmount(2, 14), // allow for a 0.02% deviation in the percentage
+                    simpleToExactAmount(3, 14), // allow for a 0.03% deviation in the percentage
                 )
 
                 const balanceAfter = await mUSD.balanceOf(savingsContract.address)
@@ -956,7 +956,7 @@ describe("SavingsManager", async () => {
 
             it("should allow interest collection before 30 mins", async () => {
                 await savingsManager.collectAndDistributeInterest(mUSD.address)
-                const tx = await savingsManager.collectAndDistributeInterest(mUSD.address)
+                await savingsManager.collectAndDistributeInterest(mUSD.address)
             })
 
             it("should allow interest collection again after 30 mins", async () => {

@@ -27,7 +27,7 @@ import {
     snapSave,
     getCollectedInterest,
 } from "./utils/snap-utils"
-import { Token, sUSD, USDC, DAI, USDT, PUSDT, PUSDC, PDAI, mUSD, PmUSD, MmUSD, RmUSD } from "./utils/tokens"
+import { Token, sUSD, USDC, DAI, USDT, PUSDT, PUSDC, PDAI, mUSD, PmUSD, MmUSD, RmUSD, Chain } from "./utils/tokens"
 import { usdFormatter } from "./utils/quantity-formatters"
 import { getSwapRates } from "./utils/rates-utils"
 import { getSigner } from "./utils"
@@ -104,7 +104,7 @@ task("mUSD-snap", "Snaps mUSD")
         const bAssets = network.name.includes("polygon") ? mUsdPolygonBassets : mUsdBassets
 
         let accounts = []
-        if (network.name === "mainnet") {
+        if (chain === Chain.mainnet) {
             accounts = [
                 {
                     name: "imUSD",
@@ -127,7 +127,7 @@ task("mUSD-snap", "Snaps mUSD")
                     address: "0xe036cce08cf4e23d33bc6b18e53caf532afa8513",
                 },
             ]
-        } else if (network.name === "polygon_mainnet") {
+        } else if (chain === Chain.polygon) {
             accounts = [
                 {
                     name: "imUSD",
@@ -156,17 +156,9 @@ task("mUSD-snap", "Snaps mUSD")
 
         const balances = await getBalances(mAsset, accounts, usdFormatter, toBlock.blockNumber)
 
-        const collectedInterestSummary = await getCollectedInterest(
-            bAssets,
-            mAsset,
-            savingsManager,
-            fromBlock,
-            toBlock,
-            usdFormatter,
-            balances.save,
-        )
+        await getCollectedInterest(bAssets, mAsset, savingsManager, fromBlock, toBlock, usdFormatter, balances.save)
 
-        await snapSave(signer, chain, toBlock.blockNumber)
+        await snapSave("mUSD", signer, chain, toBlock.blockNumber)
 
         outputFees(
             mintSummary,
@@ -186,17 +178,17 @@ task("mUSD-rates", "mUSD rate comparison to Curve")
     .addOptionalParam("swapSize", "Swap size to compare rates with Curve", 10000, types.float)
     .setAction(async (taskArgs, hre) => {
         const signer = await getSigner(hre)
-        const { network } = hre
+        const chain = getChain(hre)
 
         const block = await getBlock(hre.ethers, taskArgs.block)
-        const mAsset = await getMasset(signer, network.name, block.blockNumber)
+        const mAsset = await getMasset(signer, hre.network.name, block.blockNumber)
 
         console.log(`\nGetting rates for mUSD at block ${block.blockNumber}, ${block.blockTime.toUTCString()}`)
 
-        const bAssets = network.name.includes("polygon") ? mUsdPolygonBassets : mUsdBassets
+        const bAssets = chain === Chain.polygon ? mUsdPolygonBassets : mUsdBassets
 
         console.log("      Qty Input     Output      Qty Out    Rate             Output    Rate   Diff      Arb$")
-        await getSwapRates(bAssets, bAssets, mAsset, block.blockNumber, usdFormatter, network.name, BN.from(taskArgs.swapSize))
+        await getSwapRates(bAssets, bAssets, mAsset, block.blockNumber, usdFormatter, BN.from(taskArgs.swapSize), chain)
         await snapConfig(mAsset, block.blockNumber)
     })
 
@@ -221,6 +213,7 @@ task("mUSD-BassetAdded", "Lists the BassetAdded events from a mAsset")
         console.log(`${await mAsset.symbol()} ${mAsset.address}`)
         if (logs.length === 0)
             console.error(`Failed to find any BassetAdded events between blocks ${fromBlock.blockNumber} and ${toBlock.blockNumber}`)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         logs.forEach((log: any) => {
             console.log(`Basset added at block ${log.blockNumber} in tx ${log.blockHash}`)
         })

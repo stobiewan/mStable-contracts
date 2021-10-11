@@ -11,8 +11,8 @@ import { ONE_WEEK, ONE_HOUR, ONE_DAY, ONE_YEAR, DEFAULT_DECIMALS } from "@utils/
 import {
     IncentivisedVotingLockup,
     IncentivisedVotingLockup__factory,
-    MetaToken,
-    MetaToken__factory,
+    MintableToken,
+    MintableToken__factory,
     Nexus,
     Nexus__factory,
 } from "types/generated"
@@ -21,7 +21,7 @@ import { Account } from "types"
 let sa: StandardAccounts
 let mAssetMachine: MassetMachine
 let votingLockup: IncentivisedVotingLockup
-let mta: MetaToken
+let mta: MintableToken
 let nexus: Nexus
 
 describe("IncentivisedVotingLockup", () => {
@@ -52,7 +52,7 @@ describe("IncentivisedVotingLockup", () => {
 
     const deployFresh = async (initialRewardFunding = BN.from(0)) => {
         nexus = await new Nexus__factory(sa.default.signer).deploy(sa.governor.address)
-        mta = await new MetaToken__factory(sa.default.signer).deploy(nexus.address, sa.fundManager.address)
+        mta = await new MintableToken__factory(sa.default.signer).deploy(nexus.address, sa.fundManager.address)
         await mta.connect(sa.fundManager.signer).transfer(sa.default.address, simpleToExactAmount(1000, DEFAULT_DECIMALS))
         await mta.connect(sa.fundManager.signer).transfer(sa.other.address, simpleToExactAmount(1000, DEFAULT_DECIMALS))
         votingLockup = await new IncentivisedVotingLockup__factory(sa.default.signer).deploy(
@@ -376,7 +376,7 @@ describe("IncentivisedVotingLockup", () => {
 
                 expect(after.epoch).eq(before.epoch.add(1))
                 expect(after.totalStaticWeight).eq(before.totalStaticWeight)
-                expect(after.lastPoint.bias).lt(before.lastPoint.bias as any)
+                expect(after.lastPoint.bias).lt(before.lastPoint.bias)
                 expect(after.lastPoint.slope).eq(before.lastPoint.slope)
                 expect(after.lastPoint.blk).eq(BN.from((await latestBlock()).number))
             })
@@ -538,7 +538,7 @@ describe("IncentivisedVotingLockup", () => {
              * SETUP
              */
             const MAXTIME = await votingLockup.MAXTIME()
-            const tolerance = "0.03" // 0.03% | 0.00003 | 3e14
+            const tolerance = "0.04" // 0.04% | 0.00004 | 4e14
             const alice = sa.dummy1
             const bob = sa.dummy2
             const amount = simpleToExactAmount(1000, DEFAULT_DECIMALS)

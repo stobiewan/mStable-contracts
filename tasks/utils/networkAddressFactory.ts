@@ -1,17 +1,21 @@
+import { DEAD_ADDRESS } from "@utils/constants"
 import { ethereumAddress } from "@utils/regex"
 import { AssetAddressTypes, Chain, Token, tokens } from "./tokens"
 
 export const contractNames = [
     "Nexus",
     "DelayedProxyAdmin",
+    "ProxyAdmin",
     "ProtocolDAO",
     "Governor",
     "FundManager",
     "mStableDAO",
+    "BadgerSafe",
     "SavingsManager",
     "Liquidator",
     "RewardsDistributor",
     "BoostDirector",
+    "VoterProxy",
     "Collector",
     "Ejector",
     "Poker",
@@ -23,9 +27,20 @@ export const contractNames = [
     "FeederWrapper",
     "FeederInterestValidator",
     "BasketManager", // Legacy mUSD contract
+    "SignatureVerifier",
+    "QuestManager",
+    "QuestMaster",
+    "QuestSigner",
+    "StakedTokenMTA",
+    "StakedTokenBPT",
+    "PlatformTokenVendorFactory",
+    "BalancerVault",
+    "BalancerRecipient",
+    "BalancerStakingPoolId",
     "AaveIncentivesController",
     "AaveLendingPoolAddressProvider",
     "AlchemixStakingPool",
+    "CompController",
     "CurveRegistryExchange",
     "QuickSwapRouter",
     "UniswapRouterV3",
@@ -36,10 +51,13 @@ export const contractNames = [
     "OperationsSigner",
     "ENSRegistrarController",
     "ENSResolver",
+    "FraxVault",
+    "VisorRouter",
 ] as const
 export type ContractNames = typeof contractNames[number]
 
 export interface HardhatRuntime {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ethers?: any
     hardhatArguments?: {
         config?: string
@@ -56,11 +74,16 @@ export const getChainAddress = (contractName: ContractNames, chain: Chain): stri
                 return "0xAFcE80b19A8cE13DEc0739a1aaB7A028d6845Eb3"
             case "DelayedProxyAdmin":
                 return "0x5C8eb57b44C1c6391fC7a8A0cf44d26896f92386"
+            case "ProxyAdmin":
+                return "0x3517F5a251d56C768789c22E989FAa7d906b5a13"
             case "ProtocolDAO":
             case "Governor":
                 return "0xF6FF1F7FCEB2cE6d26687EaaB5988b445d0b94a2"
+            case "BadgerSafe":
+                return "0xCa045cC466f14C33a516D98abcab5C55C2f5112c"
+            case "BalancerRecipient":
             case "FundManager":
-                return "0x437e8c54db5c66bb3d80d2ff156e9bfe31a017db"
+                return "0x437E8C54Db5C66Bb3D80D2FF156e9bfe31a017db"
             case "mStableDAO":
                 return "0x3dd46846eed8D147841AE162C8425c08BD8E1b41"
             case "SavingsManager":
@@ -70,7 +93,9 @@ export const getChainAddress = (contractName: ContractNames, chain: Chain): stri
             case "RewardsDistributor":
                 return "0x04dfDfa471b79cc9E6E8C355e6C71F8eC4916C50"
             case "BoostDirector":
-                return "0x8892d7A5e018cdDB631F4733B5C1654e9dE10aaF"
+                return "0xBa05FD2f20AE15B0D3f20DDc6870FeCa6ACd3592"
+            case "VoterProxy":
+                return "0x10D96b1Fd46Ce7cE092aA905274B8eD9d4585A6E"
             case "Collector":
                 return "0x3F63e5bbB53e46F8B21F67C25Bf2dd78BC6C0e43"
             case "Ejector":
@@ -91,14 +116,34 @@ export const getChainAddress = (contractName: ContractNames, chain: Chain): stri
                 return "0x7C1fD068CE739A4687BEe9F69e5FD2275C7372d4"
             case "FeederInterestValidator":
                 return "0xf1049aeD858C4eAd6df1de4dbE63EF607CfF3262"
+            case "QuestMaster":
+                return "0x3dd46846eed8D147841AE162C8425c08BD8E1b41"
+            case "QuestSigner":
+                return "0xfe99964d9677d7dfb66c5ca609b64f710d2808b8"
+            case "BalancerVault":
+                return "0xBA12222222228d8Ba445958a75a0704d566BF2C8"
+            case "BalancerStakingPoolId":
+                return "0xe2469f47ab58cf9cf59f9822e3c5de4950a41c49000200000000000000000089"
             case "BasketManager":
                 return "0x66126B4aA2a1C07536Ef8E5e8bD4EfDA1FdEA96D"
+            case "SignatureVerifier":
+                return "0xC973413fe4944682910b97b261456EB9633A4756"
+            case "QuestManager":
+                return "0x861f12764780896FD783eA615Dd55Df0FF865752"
+            case "PlatformTokenVendorFactory":
+                return "0xfB73476911c5E84556a5bf953644B7ef50F6CBC5"
+            case "StakedTokenMTA":
+                return "0x8f2326316eC696F6d023E37A9931c2b2C177a3D7"
+            case "StakedTokenBPT":
+                return "0xeFbe22085D9f29863Cfb77EEd16d3cC0D927b011"
             case "AaveIncentivesController":
                 return "0xd784927Ff2f95ba542BfC824c8a8a98F3495f6b5"
             case "AaveLendingPoolAddressProvider":
                 return "0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5"
             case "AlchemixStakingPool":
                 return "0xAB8e74017a8Cc7c15FFcCd726603790d26d7DeCa"
+            case "CompController":
+                return "0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B"
             case "CurveRegistryExchange":
                 return "0xD1602F68CC7C4c7B59D686243EA35a9C73B0c6a2"
             case "UniswapRouterV3":
@@ -117,6 +162,8 @@ export const getChainAddress = (contractName: ContractNames, chain: Chain): stri
                 return "0x283Af0B28c62C092C9727F1Ee09c02CA627EB7F5"
             case "ENSResolver":
                 return "0x4976fb03c32e5b8cfe2b6ccb31c09ba78ebaba41"
+            case "VisorRouter":
+                return "0xF3f4F4e17cC65BDC36A36fDa5283F8D8020Ad0a4"
             default:
         }
     } else if (chain === Chain.polygon) {
@@ -154,6 +201,8 @@ export const getChainAddress = (contractName: ContractNames, chain: Chain): stri
                 return "0x13bA0402f5047324B4279858298F56c30EA98753"
             case "OperationsSigner":
                 return "0xdccb7a6567603af223c090be4b9c83eced210f18"
+            case "FraxVault":
+                return "0xc425Fd9Ed3C892d849C9E1a971516da1C1B29696"
             default:
         }
     } else if (chain === Chain.mumbai) {
@@ -179,6 +228,30 @@ export const getChainAddress = (contractName: ContractNames, chain: Chain): stri
                 return "0xeD04Cd19f50F893792357eA53A549E23Baf3F6cB"
             case "DelayedProxyAdmin":
                 return "0x2d369F83E9DC764a759a74e87a9Bc542a2BbfdF0"
+            case "BoostDirector":
+                return "0x363FDC050722e74C5549C11B7d2c9d68FB9D7411"
+            case "SignatureVerifier":
+                return "0x3Bf48139e7C714ADA37C97Cd29e0F04D9673494a"
+            case "QuestManager":
+                return "0x3e8aa84E846EEb89392E99d44cD51acA668ae7BA"
+            case "StakedTokenMTA":
+                return "0xc3DCB920C30D4a4222220250DD2E8bA0c5A40d51"
+            case "StakedTokenBPT":
+                return "0x96a3Ee762022be1EA48Fc35DB46169a6182ba5c8"
+            case "PlatformTokenVendorFactory":
+                return "0x91fdDea51aD5A4e050c2A34e209284344206aF8e"
+            case "BalancerVault":
+                return "0xBA12222222228d8Ba445958a75a0704d566BF2C8"
+            case "BalancerRecipient":
+                return DEAD_ADDRESS
+            case "BalancerStakingPoolId":
+                return `0x021c343c6180f03ce9e48fae3ff432309b9af199000200000000000000000001`
+            case "QuestMaster":
+                return "0x04617083205b2fdd18b15bcf60d06674c6e2c1dc"
+            case "QuestSigner":
+                return "0x04617083205b2fdd18b15bcf60d06674c6e2c1dc"
+            case "RewardsDistributor":
+                return DEAD_ADDRESS
             default:
         }
     }
@@ -239,11 +312,12 @@ export const resolveAddress = (
             // If a token Symbol
             const token = tokens.find((t) => t.symbol === addressContractNameSymbol && t.chain === chain)
             if (!token)
-                throw Error(`Invalid approve address, token symbol or contract name ${addressContractNameSymbol} for chain ${chain}`)
-            if (!token[tokenType]) throw Error(`Can not find token type ${tokenType} for ${addressContractNameSymbol} on chain ${chain}`)
+                throw Error(`Invalid approve address, token symbol or contract name "${addressContractNameSymbol}" for chain ${chain}`)
+            if (!token[tokenType])
+                throw Error(`Can not find token type "${tokenType}" for "${addressContractNameSymbol}" on chain ${chain}`)
 
             address = token[tokenType]
-            console.log(`Resolved asset with symbol ${addressContractNameSymbol} and type "${tokenType}" to address ${address}`)
+            console.log(`Resolved asset with symbol "${addressContractNameSymbol}" and type "${tokenType}" to address ${address}`)
 
             // Update the singleton instance so we don't need to resolve this next time
             updateResolvedAddresses(addressContractNameSymbol, tokenType, address)
@@ -269,7 +343,7 @@ export const resolveToken = (symbol: string, chain = Chain.mainnet, tokenType: A
 
     // If a token Symbol
     const token = tokens.find((t) => t.symbol === symbol && t.chain === chain)
-    if (!token) throw Error(`Can not fine token symbol ${symbol} on chain ${chain}`)
+    if (!token) throw Error(`Can not find token symbol ${symbol} on chain ${chain}`)
     if (!token[tokenType]) throw Error(`Can not find token type "${tokenType}" for ${symbol} on chain ${chain}`)
 
     console.log(`Resolved token symbol ${symbol} and type "${tokenType}" to address ${token[tokenType]}`)

@@ -1,14 +1,13 @@
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable no-await-in-loop */
 import { DEAD_ADDRESS, ZERO_ADDRESS } from "@utils/constants"
-import { BN } from "@utils/math"
+import { BN, simpleToExactAmount } from "@utils/math"
 import { Signer } from "ethers"
 import { formatEther } from "ethers/lib/utils"
 import {
     FeederPool,
     BoostedVault,
     MockERC20__factory,
-    FeederWrapper,
     MockInitializableToken__factory,
     AssetProxy__factory,
     MockERC20,
@@ -22,8 +21,10 @@ import {
     StakingRewardsWithPlatformToken__factory,
     StakingRewards__factory,
 } from "types/generated"
-import { deployContract, logTxDetails } from "./deploy-utils"
-import { getChainAddress } from "./networkAddressFactory"
+import { deployContract } from "./deploy-utils"
+import { verifyEtherscan } from "./etherscan"
+import { getChain, getChainAddress } from "./networkAddressFactory"
+import { getSigner } from "./signerFactory"
 import { Chain, Token } from "./tokens"
 
 interface Config {
@@ -78,8 +79,8 @@ export const deployFeederPool = async (signer: Signer, feederData: FeederData, c
 
     // Invariant Validator
     const linkedAddress = {
-        __$60670dd84d06e10bb8a5ac6f99a1c0890c$__: feederManagerAddress,
-        __$7791d1d5b7ea16da359ce352a2ac3a881c$__: feederLogicAddress,
+        "contracts/feeders/FeederLogic.sol:FeederLogic": feederLogicAddress,
+        "contracts/feeders/FeederManager.sol:FeederManager": feederManagerAddress,
     }
 
     const impl = await deployContract(new FeederPool__factory(linkedAddress, signer), "FeederPool", [
@@ -130,20 +131,25 @@ export const deployFeederPool = async (signer: Signer, feederData: FeederData, c
 }
 
 export const deployVault = async (
-    signer: Signer,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/explicit-module-boundary-types
+    hre: any,
     vaultParams: VaultData,
-    chain = Chain.mainnet,
 ): Promise<BoostedDualVault | BoostedVault | StakingRewardsWithPlatformToken | StakingRewards> => {
+    const signer = await getSigner(hre)
+    const chain = getChain(hre)
+
     const vaultData: VaultData = {
-        priceCoeff: BN.from(1),
+        priceCoeff: simpleToExactAmount(1),
         ...vaultParams,
     }
     const rewardsDistributorAddress = getChainAddress("RewardsDistributor", chain)
     const boostCoeff = 48
     let vault: BoostedDualVault | BoostedVault | StakingRewardsWithPlatformToken | StakingRewards
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let constructorArguments: any[]
     if (vaultData.boosted) {
         if (vaultData.dualRewardToken) {
-            vault = await deployContract<BoostedDualVault>(new BoostedDualVault__factory(signer), "BoostedDualVault", [
+            constructorArguments = [
                 getChainAddress("Nexus", chain),
                 vaultData.stakingToken,
                 getChainAddress("BoostDirector", chain),
@@ -151,42 +157,58 @@ export const deployVault = async (
                 boostCoeff,
                 vaultData.rewardToken,
                 vaultData.dualRewardToken,
-            ])
+            ]
+            vault = await deployContract<BoostedDualVault>(new BoostedDualVault__factory(signer), "BoostedDualVault", constructorArguments)
         } else {
-            vault = await deployContract<BoostedVault>(new BoostedVault__factory(signer), "BoostedVault", [
+            constructorArguments = [
                 getChainAddress("Nexus", chain),
                 vaultData.stakingToken,
                 getChainAddress("BoostDirector", chain),
                 vaultData.priceCoeff,
                 boostCoeff,
                 vaultData.rewardToken,
-            ])
+            ]
+            vault = await deployContract<BoostedVault>(new BoostedVault__factory(signer), "BoostedVault", constructorArguments)
         }
     } else if (vaultData.dualRewardToken) {
+        constructorArguments = [getChainAddress("Nexus", chain), vaultData.stakingToken, vaultData.rewardToken, vaultData.dualRewardToken]
         vault = await deployContract<StakingRewardsWithPlatformToken>(
             new StakingRewardsWithPlatformToken__factory(signer),
             "StakingRewardsWithPlatformToken",
-            [getChainAddress("Nexus", chain), vaultData.stakingToken, vaultData.rewardToken, vaultData.dualRewardToken],
+            constructorArguments,
         )
     } else {
-        vault = await deployContract<StakingRewards>(new StakingRewards__factory(signer), "StakingRewards", [
+        constructorArguments = [
             getChainAddress("Nexus", chain),
             vaultData.stakingToken,
             getChainAddress("BoostDirector", chain),
             vaultData.priceCoeff,
             boostCoeff,
             vaultData.rewardToken,
-        ])
+        ]
+        vault = await deployContract<StakingRewards>(new StakingRewards__factory(signer), "StakingRewards", constructorArguments)
     }
+
+    await verifyEtherscan(hre, {
+        address: vault.address,
+        constructorArguments,
+    })
 
     const initializeData = vault.interface.encodeFunctionData("initialize", [rewardsDistributorAddress, vaultData.name, vaultData.symbol])
     const proxyAdminAddress = getChainAddress("DelayedProxyAdmin", chain)
+
     // Proxy
     const proxy = await deployContract(new AssetProxy__factory(signer), "AssetProxy for vault", [
         vault.address,
         proxyAdminAddress,
         initializeData,
     ])
+
+    await verifyEtherscan(hre, {
+        address: proxy.address,
+        contract: "contracts/upgradability/Proxies.sol:AssetProxy",
+        constructorArguments: [vault.address, proxyAdminAddress, initializeData],
+    })
 
     return vault.attach(proxy.address)
 }
@@ -244,26 +266,26 @@ export const deployVault = async (
 //     )
 // }
 
-const approveFeederWrapper = async (
-    sender: Signer,
-    feederWrapper: FeederWrapper,
-    feederPools: FeederPool[],
-    vaults: BoostedVault[],
-): Promise<void> => {
-    // Get tokens to approve
-    const len = feederPools.length
-    // eslint-disable-next-line
-    for (let i = 0; i < len; i++) {
-        const [[{ addr: massetAddr }, { addr: fassetAddr }]] = await feederPools[i].getBassets()
-        const masset = Masset__factory.connect(massetAddr, sender)
-        const [bassets] = await masset.getBassets()
-        const assets = [massetAddr, fassetAddr, ...bassets.map(({ addr }) => addr)]
+// const approveFeederWrapper = async (
+//     sender: Signer,
+//     feederWrapper: FeederWrapper,
+//     feederPools: FeederPool[],
+//     vaults: BoostedVault[],
+// ): Promise<void> => {
+//     // Get tokens to approve
+//     const len = feederPools.length
+//     // eslint-disable-next-line
+//     for (let i = 0; i < len; i++) {
+//         const [[{ addr: massetAddr }, { addr: fassetAddr }]] = await feederPools[i].getBassets()
+//         const masset = Masset__factory.connect(massetAddr, sender)
+//         const [bassets] = await masset.getBassets()
+//         const assets = [massetAddr, fassetAddr, ...bassets.map(({ addr }) => addr)]
 
-        // Make the approval in one tx
-        const approveTx = await feederWrapper["approve(address,address,address[])"](feederPools[i].address, vaults[i].address, assets)
-        await logTxDetails(approveTx, "Approved FeederWrapper tokens")
-    }
-}
+//         // Make the approval in one tx
+//         const approveTx = await feederWrapper["approve(address,address,address[])"](feederPools[i].address, vaults[i].address, assets)
+//         await logTxDetails(approveTx, "Approved FeederWrapper tokens")
+//     }
+// }
 
 // export const deployBoostedFeederPools = async (deployer: Signer, addresses: CommonAddresses, pairs: Pair[]): Promise<void> => {
 //     // 1.    Deploy boostDirector & Libraries

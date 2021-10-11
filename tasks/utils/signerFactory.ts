@@ -2,7 +2,7 @@ import { Speed } from "defender-relay-client"
 import { Signer, Wallet } from "ethers"
 import { DefenderRelayProvider, DefenderRelaySigner } from "defender-relay-client/lib/ethers"
 import { impersonate } from "@utils/fork"
-import { ethereumAddress } from "@utils/regex"
+import { ethereumAddress, privateKey } from "@utils/regex"
 import { Account } from "types"
 import { getChain, getChainAddress, HardhatRuntime, resolveAddress } from "./networkAddressFactory"
 
@@ -26,9 +26,19 @@ export const getDefenderSigner = async (speed: Speed = "fast"): Promise<Signer> 
 
 let signerInstance: Signer
 
-export const getSigner = async (hre: HardhatRuntime = {}, speed: Speed = "fast"): Promise<Signer> => {
+export const getSigner = async (hre: HardhatRuntime = {}, speed: Speed = "fast", useCache = true, key?: string): Promise<Signer> => {
     // If already initiated a signer, just return the singleton instance
-    if (signerInstance) return signerInstance
+    if (useCache && signerInstance) return signerInstance
+
+    const pk = key || process.env.PRIVATE_KEY
+    if (pk) {
+        if (!pk.match(privateKey)) {
+            throw Error(`Invalid format of private key`)
+        }
+        const wallet = new Wallet(pk, hre.ethers.provider)
+        console.log(`Using signer ${await wallet.getAddress()} from private key`)
+        return wallet
+    }
 
     // If connecting to a forked chain
     if (["tasks-fork.config.ts", "tasks-fork-polygon.config.ts"].includes(hre?.hardhatArguments.config)) {

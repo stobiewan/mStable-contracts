@@ -9,6 +9,7 @@ import {
     FeederPool__factory,
     FeederWrapper__factory,
     IERC20__factory,
+    InterestValidator__factory,
     Masset,
     SavingsManager__factory,
 } from "types/generated"
@@ -34,7 +35,7 @@ import { btcFormatter, QuantityFormatter, usdFormatter } from "./utils/quantity-
 import { getSwapRates } from "./utils/rates-utils"
 import { getSigner } from "./utils/signerFactory"
 import { logTxDetails } from "./utils"
-import { getChain, getChainAddress } from "./utils/networkAddressFactory"
+import { getChain, getChainAddress, resolveAddress } from "./utils/networkAddressFactory"
 import { params } from "./taskUtils"
 
 const getBalances = async (
@@ -65,8 +66,8 @@ const getBalances = async (
 
 const getFeederPool = (signer: Signer, contractAddress: string, chain = Chain.mainnet): FeederPool => {
     const linkedAddress = {
-        __$60670dd84d06e10bb8a5ac6f99a1c0890c$__: getChainAddress("FeederManager", chain),
-        __$7791d1d5b7ea16da359ce352a2ac3a881c$__: getChainAddress("FeederLogic", chain),
+        "contracts/feeders/FeederLogic.sol:FeederLogic": getChainAddress("FeederLogic", chain),
+        "contracts/feeders/FeederManager.sol:FeederManager": getChainAddress("FeederManager", chain),
     }
     const feederPoolFactory = new FeederPool__factory(linkedAddress, signer)
     return feederPoolFactory.attach(contractAddress)
@@ -157,15 +158,7 @@ task("feeder-snap", "Gets feeder transactions over a period of time")
 
         const balances = await getBalances(feederPool, toBlock.blockNumber, fAsset, quantityFormatter)
 
-        const collectedInterestSummary = await getCollectedInterest(
-            fpAssets,
-            feederPool,
-            savingsManager,
-            fromBlock,
-            toBlock,
-            quantityFormatter,
-            balances.save,
-        )
+        await getCollectedInterest(fpAssets, feederPool, savingsManager, fromBlock, toBlock, quantityFormatter, balances.save)
 
         const data = await feederPool.data()
         console.log(`\nPending gov fees ${quantityFormatter(data.pendingFees)}`)
@@ -189,6 +182,7 @@ task("feeder-rates", "Feeder rate comparison to Curve")
     .addParam("fasset", "Token symbol of the feeder pool asset. eg HBTC, TBTC, GUSD or BUSD", undefined, types.string, false)
     .setAction(async (taskArgs, hre) => {
         const signer = await getSigner(hre)
+        const chain = getChain(hre)
 
         const block = await getBlock(hre.ethers, taskArgs.block)
 
@@ -210,9 +204,9 @@ task("feeder-rates", "Feeder rate comparison to Curve")
         const { quantityFormatter, swapSize } = getQuantities(fAsset, taskArgs.swapSize)
 
         console.log("      Qty Input     Output      Qty Out    Rate             Output    Rate   Diff      Arb$")
-        await getSwapRates(fpAssets, fpAssets, feederPool, block.blockNumber, quantityFormatter, hre.network.name, swapSize)
-        await getSwapRates([fAsset], mpAssets, feederPool, block.blockNumber, quantityFormatter, hre.network.name, swapSize)
-        await getSwapRates(mpAssets, [fAsset], feederPool, block.blockNumber, quantityFormatter, hre.network.name, swapSize)
+        await getSwapRates(fpAssets, fpAssets, feederPool, block.blockNumber, quantityFormatter, swapSize, chain)
+        await getSwapRates([fAsset], mpAssets, feederPool, block.blockNumber, quantityFormatter, swapSize, chain)
+        await getSwapRates(mpAssets, [fAsset], feederPool, block.blockNumber, quantityFormatter, swapSize, chain)
         await snapConfig(feederPool, block.blockNumber)
     })
 
@@ -389,6 +383,32 @@ task("feeder-swap", "Swap some Feeder Pool tokens")
 
         const tx = await fp.swap(inputToken.address, outputToken.address, inputAmount, minOutputAmount, signerAddress)
         await logTxDetails(tx, `swap ${formatUnits(inputAmount)} ${inputSymbol} for ${outputSymbol} using ${fpSymbol} Feeder Pool`)
+    })
+
+task("feeder-collect-interest", "Collects and interest from feeder pools")
+    .addParam("fasset", "Token symbol of feeder pool. eg HBTC, alUSD or PFRAX", undefined, types.string, false)
+    .addOptionalParam("speed", "Defender Relayer speed param: 'safeLow' | 'average' | 'fast' | 'fastest'", "average", types.string)
+    .setAction(async (taskArgs, hre) => {
+        const chain = getChain(hre)
+        const signer = await getSigner(hre, taskArgs.speed)
+
+        const fpAddress = resolveAddress(taskArgs.fasset, chain, "feederPool")
+
+        const interestValidatorAddress = resolveAddress("FeederInterestValidator", chain)
+        const validator = InterestValidator__factory.connect(interestValidatorAddress, signer)
+
+        const lastBatchCollected = await validator.lastBatchCollected(fpAddress)
+        const lastBatchDate = new Date(lastBatchCollected.mul(1000).toNumber())
+        console.log(`The last interest collection was ${lastBatchDate.toUTCString()}, epoch ${lastBatchCollected} seconds`)
+
+        const currentEpoc = new Date().getTime() / 1000
+        if (currentEpoc - lastBatchCollected.toNumber() < 60 * 60 * 12) {
+            console.error(`Can not run again as the last run was less then 12 hours ago`)
+            process.exit(3)
+        }
+
+        const tx = await validator.collectAndValidateInterest([fpAddress])
+        await logTxDetails(tx, "collectAndValidateInterest")
     })
 
 module.exports = {}

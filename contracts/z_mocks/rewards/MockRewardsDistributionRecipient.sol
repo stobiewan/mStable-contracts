@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -7,7 +8,7 @@ contract MockRewardsDistributionRecipient is IRewardsRecipientWithPlatformToken 
     IERC20 public rewardToken;
     IERC20 public platformToken;
 
-    constructor(IERC20 _rewardToken, IERC20 _platformToken) public {
+    constructor(IERC20 _rewardToken, IERC20 _platformToken) {
         rewardToken = _rewardToken;
         platformToken = _platformToken;
     }

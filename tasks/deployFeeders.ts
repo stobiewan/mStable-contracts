@@ -95,7 +95,6 @@ task("deployVault", "Deploy Feeder Pool with boosted dual vault")
     .addOptionalParam("price", "Price coefficient is the value of the mAsset in USD. eg mUSD/USD = 1, mBTC/USD", 1, types.int)
     .addOptionalParam("speed", "Defender Relayer speed param: 'safeLow' | 'average' | 'fast' | 'fastest'", "fast", types.string)
     .setAction(async (taskArgs, hre) => {
-        const signer = await getSigner(hre, taskArgs.speed)
         const chain = getChain(hre)
 
         if (taskArgs.name?.length < 4) throw Error(`Invalid token name ${taskArgs.name}`)
@@ -128,7 +127,7 @@ task("deployVault", "Deploy Feeder Pool with boosted dual vault")
             dualRewardToken: dualRewardToken?.address,
         }
 
-        await deployVault(signer, vaultData, chain)
+        await deployVault(hre, vaultData)
     })
 
 task("FeederWrapper-deploy", "Deploy a new FeederWrapper").setAction(async (taskArgs, hre) => {

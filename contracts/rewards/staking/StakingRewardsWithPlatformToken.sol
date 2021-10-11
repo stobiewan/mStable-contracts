@@ -12,11 +12,11 @@ import { StableMath } from "../../shared/StableMath.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { Initializable } from "@openzeppelin/contracts/utils/Initializable.sol";
+import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 /**
  * @title  StakingRewardsWithPlatformToken
- * @author Stability Labs Pty. Ltd.
+ * @author mStable
  * @notice Rewards stakers of a given LP token (a.k.a StakingToken) with RewardsToken, on a pro-rata basis
  * additionally, distributes the Platform token airdropped by the platform
  * @dev    Derives from ./StakingRewards.sol and implements a secondary token into the core logic
@@ -78,7 +78,7 @@ contract StakingRewardsWithPlatformToken is
         address _rewardsToken,
         address _platformToken,
         uint256 _duration
-    ) public StakingTokenWrapper(_stakingToken) InitializableRewardsDistributionRecipient(_nexus) {
+    ) StakingTokenWrapper(_stakingToken) InitializableRewardsDistributionRecipient(_nexus) {
         rewardsToken = IERC20(_rewardsToken);
         platformToken = IERC20(_platformToken);
         DURATION = _duration;
